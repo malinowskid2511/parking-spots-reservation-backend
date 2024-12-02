@@ -1,0 +1,35 @@
+# Step 1: Use the official Node.js image as the base for the build stage
+FROM node:18-alpine AS build
+
+# Step 2: Set the working directory in the container
+WORKDIR /app
+
+# Step 3: Copy the package files and install dependencies
+COPY package.json package-lock.json ./
+RUN npm install
+
+# Step 4: Copy the rest of the application source code
+COPY . .
+
+# Step 5: Build the Nest.js application
+RUN npm run build
+
+# Step 6: Use a smaller base image for production
+FROM node:18-alpine
+
+# Step 7: Set the working directory in the production container
+WORKDIR /app
+
+# Step 8: Copy only the necessary files from the build stage
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/package.json /app/package.json
+COPY --from=build /app/node_modules ./node_modules
+
+# Step 9: Set environment variables for production
+ENV NODE_ENV=production
+
+# Step 10: Expose the port for the application
+EXPOSE 3000
+
+# Step 11: Start the Nest.js application
+CMD ["node", "dist/main"]

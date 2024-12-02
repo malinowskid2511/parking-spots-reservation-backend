@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  # PostgreSQL
+  postgresql:
+    image: postgres
+    container_name: postgres
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD} 
+      POSTGRES_DB: parkingSystem
+    volumes:
+      - type: volume
+        source: postgres-data11
+        target: /var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - backend
+
+  # Client 
+  client:
+    image: client:latest
+    build:
+      context: ./src/client 
+      dockerfile: Dockerfile 
+    container_name: client
+    environment:
+      - NODE_ENV=production  
+      - POSTGRES_HOSTNAME=${POSTGRES_HOSTNAME}
+      - POSTGRES_DATABASE=${POSTGRES_DATABASE}
+      - POSTGRES_USERNAME=${POSTGRES_USERNAME}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - "3000:3000"
+    networks:
+      - backend
+    restart: unless-stopped
+  # Admin 
+  admin:
+    image: admin:latest
+    build:
+      context: ./src/admin 
+      dockerfile: Dockerfile 
+    container_name: admin
+    depends_on:
+      - client
+    environment:
+      - NODE_ENV=production  
+      - POSTGRES_HOSTNAME=${POSTGRES_HOSTNAME}
+      - POSTGRES_DATABASE=${POSTGRES_DATABASE}
+      - POSTGRES_USERNAME=${POSTGRES_USERNAME}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - "3005:3005"
+    networks:
+      - backend
+    restart: unless-stopped
+  # RabbitMQ
+  rabbitmq:
+    image: rabbitmq:management
+    container_name: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - backend
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    restart: unless-stopped
+
+volumes:
+  postgres-data11:
+  rabbitmq-data:
+
+networks:
+  backend:
+    driver: bridge
